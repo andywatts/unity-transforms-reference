@@ -6,7 +6,8 @@ using Unity.Mathematics;
 using Unity.Transforms;
 using UnityEngine;
 
-public class CreateHierachy : SystemBase
+[UpdateInGroup(typeof(InitializationSystemGroup))]
+public class CreateHierarchy : SystemBase
 {
     private bool runOnce;
 
@@ -14,31 +15,26 @@ public class CreateHierachy : SystemBase
     {
         if (!runOnce)
         {
-            Debug.Log("Create parent and cube");
-            
             var parentPrefab = GetSingleton<ParentPrefab>().Value;
             var parent = EntityManager.Instantiate(parentPrefab);
             
-            var cubePrefab = GetSingleton<CubePrefab>().Value;
-            var cube = EntityManager.Instantiate(cubePrefab);
-            EntityManager.AddComponentData(cube, new Parent {Value = cube});
-            EntityManager.AddComponentData(cube, new LocalToParent {Value = new float4x4(1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1)});
-                
-                
-            var children = EntityManager.AddBuffer<Child>(parent);
-            children.Add(new Child {Value = cube});
-
+            var childPrefab = GetSingleton<ChildPrefab>().Value;
+            var child = EntityManager.Instantiate(childPrefab);
+            
+            // Add Parent and friends for ParentSystem's updateNewParents
+            EntityManager.AddComponentData(child, new Parent {Value = parent});
+            EntityManager.AddComponentData(child, new LocalToParent {Value = new float4x4(1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1)});
+            EntityManager.AddComponentData(child, new LocalToWorld() {Value = new float4x4(1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1)});
+            
+            
+            // Set Rotation on parent
             var q = quaternion.EulerXYZ(0, 45 * Mathf.Deg2Rad, 0);
             SetComponent(parent, new Rotation {Value = q});
+            
             runOnce = true;
-            
-            
-            // BUGS
-            // No rotation unless LocalToParent
-            // stackOverflow with LocalToParent
-            
-            
         }
-
     }
 }
+
+            // var children = EntityManager.AddBuffer<Child>(parent);
+            // children.Add(new Child {Value = child});
